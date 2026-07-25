@@ -1,0 +1,91 @@
+url: https://linhdo154.github.io/MBMM/
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+home:
+  title: mbmm — Mechanistic Bayesian Mixture Models
+  description: >
+    Latent-state inference for vaccine and infection immunology, combining
+    mechanistic ODE trajectory models with Approximate Bayesian Computation
+    and covariate-linked gate models.
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [search, github]
+  components:
+    articles:
+      text: Articles
+      menu:
+      - text: Introduction to mbmm
+        href: articles/mbmm-intro.html
+      - text: Simulation demo
+        href: articles/mbmm-simulation-demo.html
+
+reference:
+- title: Fit the model
+  desc: Top-level fitting functions
+  contents:
+  - mbmm
+  - mbmm_fit_gate
+  - mbmm_abc_fit
+
+- title: ABC reference banks
+  desc: Build and pool Approximate Bayesian Computation banks
+  contents:
+  - mbmm_abc_bank
+  - mbmm_pool_bank
+  - mbmm_predict_bank
+  - mbmm_join_targets
+
+- title: Gate model
+  desc: Covariate-linked latent-class gate
+  contents:
+  - mbmm_gate_threshold
+  - mbmm_bootstrap_gate_threshold
+  - mbmm_backtransform_threshold
+  - mbmm_predict_gate
+  - summary.mbmm_gate
+  - print.mbmm_gate
+  - plot.mbmm_gate
+
+- title: Scoring and thresholds
+  contents:
+  - mbmm_score_subjects
+  - mbmm_class_loglik
+  - mbmm_noise_floor_loglik
+  - summary.mbmm_threshold_summary
+  - print.mbmm_threshold_summary
+
+- title: Simulation and demo data
+  desc: Simulate trajectories and example datasets used in the vignettes
+  contents:
+  - mbmm_simulate_demo_antibody
+  - mbmm_simulate_abortive_pattern
+  - mbmm_simulate_cop_demo
+  - mbmm_simulate_manuscript_demo
+  - mbmm_example_eclipse_simulate
+  - mbmm_example_eclipse_prior
+  - mbmm_demo_visit_schedules
+  - mbmm_demo_scenario_grid
+  - mbmm_run_simulation_grid
+  - mbmm_productive_infection
+
+- title: Model fit objects
+  contents:
+  - summary.mbmm_fit
+  - print.mbmm_fit
+  - plot.mbmm_fit
+
+- title: Numerical utilities
+  contents:
+  - mbmm_rk4_solve
+  - mbmm_logsumexp
+  - mbmm_logmeanexp
+  - mbmm_logit
+  - mbmm_inv_logit
+  - mbmm_safe_log10
+  - mbmm_dnorm_censored
+  - mbmm_default_distance

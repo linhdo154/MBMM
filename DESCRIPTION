@@ -1,0 +1,57 @@
+Package: mbmm
+Type: Package
+Title: Mechanistic Bayesian Mixture Models for Latent Immunological
+        States
+Version: 0.1.0
+URL: https://linhdo154.github.io/MBMM/, https://github.com/linhdo154/MBMM
+BugReports: https://github.com/linhdo154/MBMM/issues
+Authors@R: c(
+    person(
+      given = "Linh",
+      family = "Do",
+      email = "thuylinh.do@duke.edu",
+      role = c("aut", "cre")
+    ),
+    person(
+      given = "Janice",
+      family = "McCarthy",
+      role = "aut"
+    ),
+    person(
+      given = "Bruce",
+      family = "Rogers",
+      email = "bruce.rogers2@duke.edu",
+      role = "aut"
+    )
+  )
+Description: A general implementation of the Mechanistic Bayesian Mixture
+    Model (MBMM) framework of Do, McCarthy, and Rogers (2026), "A Mechanistic
+    Bayesian Framework for Latent-State Inference in Vaccine and Infection
+    Immunology". MBMM infers posterior probabilities of a latent
+    immunological state (e.g. productive infection vs. protection/transient
+    detection, or a boost-responsive vs. weak/stable antibody phenotype)
+    from sparse longitudinal biomarker trajectories, by embedding an
+    application-specific ODE trajectory model inside a Bayesian mixture
+    likelihood evaluated against Approximate Bayesian Computation (ABC)
+    reference banks, and linking covariates to latent-state probabilities
+    through a logistic (K = 2) or multinomial (K > 2) gate model. The
+    package is deliberately domain-agnostic: the user supplies the
+    mechanistic trajectory model (ODE simulator), the ABC prior, the
+    observation model, and the covariate/gate data; the package supplies
+    the shared inferential engine (ABC bank construction, marginal
+    reference-bank likelihoods with leave-one-donor-out scoring,
+    EM/direct-optimization gate fitting, likelihood-ratio and permutation
+    testing, and fitted-threshold summaries).
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.0)
+Imports: stats, graphics, grDevices, deSolve
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    ggplot2
+VignetteBuilder: knitr
+RoxygenNote: 7.3.3
+Config/testthat/edition: 3
+NeedsCompilation: no
