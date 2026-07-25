@@ -5,22 +5,29 @@ framework of Do, McCarthy, and Rogers (2026), *A Mechanistic Bayesian
 Framework for Latent-State Inference in Vaccine and Infection
 Immunology*.
 
-MBMM infers posterior probabilities of a latent immunological state
-(e.g. productive infection vs. protection/transient detection, or a
-boost-responsive vs. weak/stable antibody phenotype) from sparse
-longitudinal biomarker trajectories. It does this by embedding an
-application-specific ODE trajectory model inside a Bayesian mixture
-likelihood evaluated against Approximate Bayesian Computation (ABC)
-reference banks, and linking covariates to latent-state probabilities
-through a logistic (K = 2) or multinomial (K \> 2) gate model.
+MBMM infers posterior probabilities of latent immunological states, such
+as productive infection versus non-establishment or transient/abortive
+detection, or a boost-responsive versus weak/stable antibody phenotype,
+from sparse longitudinal biomarker trajectories.
 
-The package is deliberately domain-agnostic: you supply the mechanistic
-trajectory model (ODE simulator), the ABC prior, the observation model,
-and the covariate/gate data; `mbmm` supplies the shared inferential
-engine — ABC bank construction, marginal reference-bank likelihoods with
-leave-one-donor-out scoring, EM/direct-optimization gate fitting,
-likelihood-ratio and permutation testing, and fitted-threshold
-summaries.
+The framework embeds an application-specific ordinary differential
+equation trajectory model inside a Bayesian mixture likelihood evaluated
+against Approximate Bayesian Computation (ABC) reference banks.
+Covariates are linked to latent-state probabilities through a logistic
+gate for two classes or a multinomial gate for more than two classes.
+
+The package is deliberately domain-agnostic. Users supply the
+mechanistic trajectory model, ABC prior, observation model, and
+covariate data. `mbmm` supplies the shared inferential engine,
+including:
+
+- ABC reference-bank construction;
+- marginal reference-bank likelihoods;
+- leave-one-donor-out scoring;
+- logistic and multinomial gate fitting;
+- likelihood-ratio and permutation tests;
+- fitted-threshold estimation and uncertainty summaries;
+- reduced manuscript-style simulation tools.
 
 ## Installation
 
@@ -29,32 +36,45 @@ You can install the development version of `mbmm` from GitHub with:
 ``` r
 
 # install.packages("remotes")
-remotes::install_github("USERNAME/mbmm")
+remotes::install_github("linhdo154/MBMM")
 ```
 
 ## Getting started
 
-The **Introduction to mbmm** vignette walks through the three stages of
-a typical analysis — fitting reference banks, scoring subjects, and
-fitting the gate model — on simulated correlate-of-protection data. A
-second vignette, **Simulation demo**, walks through generating synthetic
-cohorts to validate the pipeline end to end. See the
-[Articles](https://linhdo154.github.io/MBMM/articles/index.md) tab for
-both.
+The [Introduction to
+mbmm](https://linhdo154.github.io/MBMM/articles/mbmm-intro.html)
+vignette walks through the main stages of an MBMM analysis: constructing
+reference banks, scoring subjects, and fitting the covariate-linked gate
+model using simulated correlate-of-protection data.
+
+The [reduced manuscript-style
+simulation](https://linhdo154.github.io/MBMM/articles/mbmm-simulation-demo.html)
+vignette demonstrates how to generate synthetic cohorts and run the
+pipeline end to end.
+
+The complete package website is available at:
+
+<https://linhdo154.github.io/MBMM/>
 
 ``` r
 
 library(mbmm)
-## basic example code
 ```
 
 ## Citation
 
-If you use `mbmm` in your work, please cite:
+To obtain the recommended package citation in R, run:
 
-> Do, T., McCarthy, J., & Rogers, B. (2026). A Mechanistic Bayesian
-> Framework for Latent-State Inference in Vaccine and Infection
-> Immunology.
+``` r
+
+citation("mbmm")
+```
+
+The methodological framework is described in:
+
+> Do, L., McCarthy, G., and Rogers, B. (2026).  
+> *A Mechanistic Bayesian Framework for Latent-State Inference in
+> Vaccine and Infection Immunology.*
 
 ## License
 

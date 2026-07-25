@@ -60,30 +60,45 @@
 <!-- badges: start -->
 
 <p><code>mbmm</code> implements the <strong>Mechanistic Bayesian Mixture Model (MBMM)</strong> framework of Do, McCarthy, and Rogers (2026), <em>A Mechanistic Bayesian Framework for Latent-State Inference in Vaccine and Infection Immunology</em>.</p>
-<p>MBMM infers posterior probabilities of a latent immunological state (e.g. productive infection vs. protection/transient detection, or a boost-responsive vs. weak/stable antibody phenotype) from sparse longitudinal biomarker trajectories. It does this by embedding an application-specific ODE trajectory model inside a Bayesian mixture likelihood evaluated against Approximate Bayesian Computation (ABC) reference banks, and linking covariates to latent-state probabilities through a logistic (K = 2) or multinomial (K &gt; 2) gate model.</p>
-<p>The package is deliberately domain-agnostic: you supply the mechanistic trajectory model (ODE simulator), the ABC prior, the observation model, and the covariate/gate data; <code>mbmm</code> supplies the shared inferential engine — ABC bank construction, marginal reference-bank likelihoods with leave-one-donor-out scoring, EM/direct-optimization gate fitting, likelihood-ratio and permutation testing, and fitted-threshold summaries.</p>
+<p>MBMM infers posterior probabilities of latent immunological states, such as productive infection versus non-establishment or transient/abortive detection, or a boost-responsive versus weak/stable antibody phenotype, from sparse longitudinal biomarker trajectories.</p>
+<p>The framework embeds an application-specific ordinary differential equation trajectory model inside a Bayesian mixture likelihood evaluated against Approximate Bayesian Computation (ABC) reference banks. Covariates are linked to latent-state probabilities through a logistic gate for two classes or a multinomial gate for more than two classes.</p>
+<p>The package is deliberately domain-agnostic. Users supply the mechanistic trajectory model, ABC prior, observation model, and covariate data. <code>mbmm</code> supplies the shared inferential engine, including:</p>
+<ul>
+<li>ABC reference-bank construction;</li>
+<li>marginal reference-bank likelihoods;</li>
+<li>leave-one-donor-out scoring;</li>
+<li>logistic and multinomial gate fitting;</li>
+<li>likelihood-ratio and permutation tests;</li>
+<li>fitted-threshold estimation and uncertainty summaries;</li>
+<li>reduced manuscript-style simulation tools.</li>
+</ul>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
 <p>You can install the development version of <code>mbmm</code> from GitHub with:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
-<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"USERNAME/mbmm"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"linhdo154/MBMM"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="getting-started">Getting started<a class="anchor" aria-label="anchor" href="#getting-started"></a>
 </h2>
-<p>The <strong>Introduction to mbmm</strong> vignette walks through the three stages of a typical analysis — fitting reference banks, scoring subjects, and fitting the gate model — on simulated correlate-of-protection data. A second vignette, <strong>Simulation demo</strong>, walks through generating synthetic cohorts to validate the pipeline end to end. See the <a href="articles/index.html">Articles</a> tab for both.</p>
+<p>The <a href="https://linhdo154.github.io/MBMM/articles/mbmm-intro.html">Introduction to mbmm</a> vignette walks through the main stages of an MBMM analysis: constructing reference banks, scoring subjects, and fitting the covariate-linked gate model using simulated correlate-of-protection data.</p>
+<p>The <a href="https://linhdo154.github.io/MBMM/articles/mbmm-simulation-demo.html">reduced manuscript-style simulation</a> vignette demonstrates how to generate synthetic cohorts and run the pipeline end to end.</p>
+<p>The complete package website is available at:</p>
+<p><a href="https://linhdo154.github.io/MBMM/" class="uri">https://linhdo154.github.io/MBMM/</a></p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://linhdo154.github.io/MBMM/">mbmm</a></span><span class="op">)</span></span>
-<span><span class="co">## basic example code</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://linhdo154.github.io/MBMM/">mbmm</a></span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
 </h2>
-<p>If you use <code>mbmm</code> in your work, please cite:</p>
+<p>To obtain the recommended package citation in R, run:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/citation.html" class="external-link">citation</a></span><span class="op">(</span><span class="st">"mbmm"</span><span class="op">)</span></span></code></pre></div>
+<p>The methodological framework is described in:</p>
 <blockquote>
-<p>Do, T., McCarthy, J., &amp; Rogers, B. (2026). A Mechanistic Bayesian Framework for Latent-State Inference in Vaccine and Infection Immunology.</p>
+<p>Do, L., McCarthy, G., and Rogers, B. (2026).<br><em>A Mechanistic Bayesian Framework for Latent-State Inference in Vaccine and Infection Immunology.</em></p>
 </blockquote>
 </div>
 <div class="section level2">
@@ -129,8 +144,8 @@
 <div class="dev-status">
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
-<li><a href="https://github.com/USERNAME/mbmm/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/USERNAME/mbmm/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
-<li><a href="https://github.com/USERNAME/mbmm/actions/workflows/pkgdown.yaml" class="external-link"><img src="https://github.com/USERNAME/mbmm/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a></li>
+<li><a href="https://github.com/linhdo154/MBMM/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/linhdo154/MBMM/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+<li><a href="https://github.com/linhdo154/MBMM/actions/workflows/pkgdown.yaml" class="external-link"><img src="https://github.com/linhdo154/MBMM/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a></li>
 </ul>
 </div>
 

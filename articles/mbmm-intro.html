@@ -400,8 +400,8 @@ scale.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Gate coefficients:</span></span>
 <span><span class="co">#&gt;               term    estimate odds_ratio</span></span>
-<span><span class="co">#&gt;        (Intercept) -0.06704832  0.9351500</span></span>
-<span><span class="co">#&gt;  baseline_antibody -1.21523407  0.2966406</span></span></code></pre></div>
+<span><span class="co">#&gt;        (Intercept) -0.06704833  0.9351500</span></span>
+<span><span class="co">#&gt;  baseline_antibody -1.21523410  0.2966406</span></span></code></pre></div>
 <p>The printed output includes:</p>
 <ul>
 <li>the two latent classes;</li>
@@ -421,8 +421,8 @@ observed-data log-likelihood.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span><span class="op">$</span><span class="va">gate</span><span class="op">$</span><span class="va">coef</span></span>
 <span><span class="co">#&gt;                term    estimate odds_ratio</span></span>
-<span><span class="co">#&gt; 1       (Intercept) -0.06704832  0.9351500</span></span>
-<span><span class="co">#&gt; 2 baseline_antibody -1.21523407  0.2966406</span></span></code></pre></div>
+<span><span class="co">#&gt; 1       (Intercept) -0.06704833  0.9351500</span></span>
+<span><span class="co">#&gt; 2 baseline_antibody -1.21523410  0.2966406</span></span></code></pre></div>
 <p>The first class is <code>productive</code>, so the fitted coefficient
 describes how baseline antibody changes the log odds of productive
 infection.</p>
@@ -459,7 +459,7 @@ model, this is the fitted 50% gate threshold.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">threshold_point</span></span>
-<span><span class="co">#&gt; [1] -0.05517317</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] -0.05517318</span></span></code></pre></div>
 <p>Here, baseline antibody is already standardized, so the result is on
 the standardized covariate scale.</p>
 <p>This quantity is a model-based gate summary. It is not automatically
@@ -518,7 +518,7 @@ focal-covariate range.</li>
 <span><span class="co">#&gt; 2         2      0.28633103         0.28633103        TRUE              TRUE</span></span>
 <span><span class="co">#&gt; 3         3      0.06853768         0.06853768        TRUE              TRUE</span></span>
 <span><span class="co">#&gt; 4         4     -0.20558727        -0.20558727        TRUE              TRUE</span></span>
-<span><span class="co">#&gt; 5         5      0.50104044         0.50104044        TRUE              TRUE</span></span>
+<span><span class="co">#&gt; 5         5      0.50104045         0.50104045        TRUE              TRUE</span></span>
 <span><span class="co">#&gt; 6         6     -0.25315780        -0.25315780        TRUE              TRUE</span></span>
 <span><span class="co">#&gt;   extrapolated</span></span>
 <span><span class="co">#&gt; 1        FALSE</span></span>

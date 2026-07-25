@@ -313,8 +313,8 @@ fit
 #> 
 #> Gate coefficients:
 #>               term    estimate odds_ratio
-#>        (Intercept) -0.06704832  0.9351500
-#>  baseline_antibody -1.21523407  0.2966406
+#>        (Intercept) -0.06704833  0.9351500
+#>  baseline_antibody -1.21523410  0.2966406
 ```
 
 The printed output includes:
@@ -336,8 +336,8 @@ observed-data log-likelihood.
 
 fit$gate$coef
 #>                term    estimate odds_ratio
-#> 1       (Intercept) -0.06704832  0.9351500
-#> 2 baseline_antibody -1.21523407  0.2966406
+#> 1       (Intercept) -0.06704833  0.9351500
+#> 2 baseline_antibody -1.21523410  0.2966406
 ```
 
 The first class is `productive`, so the fitted coefficient describes how
@@ -381,7 +381,7 @@ threshold_point <- mbmm_gate_threshold(
 )
 
 threshold_point
-#> [1] -0.05517317
+#> [1] -0.05517318
 ```
 
 Here, baseline antibody is already standardized, so the result is on the
@@ -450,7 +450,7 @@ head(threshold_boot$bootstrap)
 #> 2         2      0.28633103         0.28633103        TRUE              TRUE
 #> 3         3      0.06853768         0.06853768        TRUE              TRUE
 #> 4         4     -0.20558727        -0.20558727        TRUE              TRUE
-#> 5         5      0.50104044         0.50104044        TRUE              TRUE
+#> 5         5      0.50104045         0.50104045        TRUE              TRUE
 #> 6         6     -0.25315780        -0.25315780        TRUE              TRUE
 #>   extrapolated
 #> 1        FALSE
