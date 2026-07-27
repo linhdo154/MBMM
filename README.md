@@ -73,7 +73,7 @@ citation("mbmm")
 
 The methodological framework is described in:
 
-> Do, L., McCarthy, G., and Rogers, B. (2026).  
+> Do, L., McCarthy, J., and Rogers, B. (2026).  
 > *A Mechanistic Bayesian Framework for Latent-State Inference in Vaccine
 > and Infection Immunology.*
 
