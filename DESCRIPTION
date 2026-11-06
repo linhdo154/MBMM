@@ -1,57 +1,34 @@
 Package: mbmm
-Type: Package
-Title: Mechanistic Bayesian Mixture Models for Latent Immunological
-        States
-Version: 0.1.0
-URL: https://linhdo154.github.io/MBMM/, https://github.com/linhdo154/MBMM
-BugReports: https://github.com/linhdo154/MBMM/issues
+Title: Mechanistic Bayesian Mixture Models for Latent Kinetic States
+Version: 0.1.1
 Authors@R: c(
-    person(
-      given = "Linh",
-      family = "Do",
-      email = "thuylinh.do@duke.edu",
-      role = c("aut", "cre")
-    ),
-    person(
-      given = "Janice",
-      family = "McCarthy",
-      role = "aut"
-    ),
-    person(
-      given = "Bruce",
-      family = "Rogers",
-      email = "bruce.rogers2@duke.edu",
-      role = "aut"
-    )
-  )
-Description: A general implementation of the Mechanistic Bayesian Mixture
-    Model (MBMM) framework of Do, McCarthy, and Rogers (2026), "A Mechanistic
-    Bayesian Framework for Latent-State Inference in Vaccine and Infection
-    Immunology". MBMM infers posterior probabilities of a latent
-    immunological state (e.g. productive infection vs. protection/transient
-    detection, or a boost-responsive vs. weak/stable antibody phenotype)
-    from sparse longitudinal biomarker trajectories, by embedding an
-    application-specific ODE trajectory model inside a Bayesian mixture
-    likelihood evaluated against Approximate Bayesian Computation (ABC)
-    reference banks, and linking covariates to latent-state probabilities
-    through a logistic (K = 2) or multinomial (K > 2) gate model. The
-    package is deliberately domain-agnostic: the user supplies the
-    mechanistic trajectory model (ODE simulator), the ABC prior, the
-    observation model, and the covariate/gate data; the package supplies
-    the shared inferential engine (ABC bank construction, marginal
-    reference-bank likelihoods with leave-one-donor-out scoring,
-    EM/direct-optimization gate fitting, likelihood-ratio and permutation
-    testing, and fitted-threshold summaries).
+    person("Linh", "Do", email = "thuylinh.do@duke.edu",
+           role = c("aut", "cre")),
+    person("Janice", "McCarthy", role = "aut"),
+    person("Bruce", "Rogers", role = "aut"))
+Description: Estimates how a covariate shifts the probability of a latent
+    biological state that is expressed through a longitudinal trajectory
+    rather than observed directly. Each state is represented by a population
+    of mechanistic trajectories (a "bank"); integrating a censoring-aware
+    trajectory likelihood over that population gives a class likelihood, and
+    a covariate-dependent gate supplies the prior state probability. An EM
+    algorithm estimates the gate by weighted logistic regression on the
+    resulting posterior responsibilities, so participants whose state is
+    uncertain contribute at the weight the evidence warrants. Includes the
+    eclipse-phase target-cell-limited viral model and the reduced Andraud
+    prime-boost antibody model used in the accompanying manuscript.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Depends: R (>= 4.0)
-Imports: stats, graphics, grDevices, deSolve
-Suggests:
-    testthat (>= 3.0.0),
-    knitr,
-    rmarkdown,
-    ggplot2
+Depends: R (>= 4.1)
+Imports:
+    ggplot2,
+    stats
+Suggests: deSolve, testthat (>= 3.0.0), knitr, rmarkdown
 VignetteBuilder: knitr
-RoxygenNote: 7.3.3
 Config/testthat/edition: 3
-NeedsCompilation: no
+Roxygen: list(markdown = TRUE)
+URL: https://github.com/linhdo154/MBMM,
+    https://linhdo154.github.io/MBMM/
+BugReports: https://github.com/linhdo154/MBMM/issues
+Config/roxygen2/version: 8.0.0
+RoxygenNote: 7.3.3

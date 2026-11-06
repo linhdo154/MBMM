@@ -1,4 +1,29 @@
 url: https://linhdo154.github.io/MBMM/
 template:
   bootstrap: 5
-
+reference:
+  - title: Likelihood
+    desc: Turning measurements into evidence for a state
+    contents: [obs_loglik, trajectory_loglik, background_loglik, class_loglik]
+  - title: Building the likelihood over shared points
+    desc: Integrating out what the question is not about
+    contents: [pool_marginal, jitter_marginal]
+  - title: The kinetic population
+    desc: Estimating the bank, and keeping it honest
+    contents: [fit_bank, bank_loo, screen_candidates, screen_positive,
+               profile_sigma, restrict_bank]
+  - title: The gate
+    desc: Covariate association with the latent state
+    contents: [fit_gate, gate_test]
+  - title: Mechanistic models
+    contents: [eclipse_trajectory, eclipse_design, andraud_trajectory,
+               andraud_levels, amp_to_flux, flux_to_amp]
+  - title: Simulation
+    contents: [simulate_mbmm]
+  - title: Visualisation
+    desc: Seeing the kinetic population and checking simulation recovery
+    contents: [plot_bank, plot_responsibility, plot_gate]
+articles:
+  - title: Articles
+    navbar: ~
+    contents: [mbmm, custom-ode, pipeline, sdy2354]

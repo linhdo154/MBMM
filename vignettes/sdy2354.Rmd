@@ -1,0 +1,313 @@
+---
+title: "Route II: simulation with a prespecified parameter region"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Route II: simulation with a prespecified parameter region}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.5, fig.align = "center")
+```
+
+```{r setup}
+library(mbmm)
+library(ggplot2)
+theme_set(theme_minimal(base_size = 12))
+
+auc <- function(score, positive) {
+  r <- rank(score)
+  np <- sum(positive)
+  nn <- sum(!positive)
+  (sum(r[positive]) - np * (np + 1) / 2) / (np * nn)
+}
+```
+
+## What this vignette must establish
+
+**Scientific question:** does assignment to a vaccine arm change the
+probability that a booster produces a positive durable antibody gain?
+
+**Why MBMM:** durability is a property of an underlying plateau, not of one
+observed visit. A short-lived peak can be large even when the long-lived level
+does not improve.
+
+**Route II:** there is no labelled reference population. Before examining the
+outcomes, state 1 is defined as the region
+
+\[
+S_1=\{g>0\},\qquad g=\log_{10}(D_1/C_1),
+\]
+
+where $C_1$ is the long-lived level after prime and $D_1$ is the long-lived
+level after boost. A marginal kinetic population is estimated and then
+restricted to $S_1$ or its complement.
+
+Because the data are simulated, success can be checked against the known
+state and known gate. MBMM should recover the arm effect, classify the latent
+region accurately, and retain adequate estimated mass on both sides of the
+prespecified boundary.
+
+## The hierarchy in scientific language
+
+| MBMM object | Meaning in this simulation |
+|---|---|
+| $Y_i$ | repeated antibody measurements spanning prime and boost |
+| $Z_i=1$ | the participant's durable gain satisfies $g>0$ |
+| $Z_i=0$ | the durable gain satisfies $g\leq0$ |
+| $x_i$ | randomised arm indicator |
+| $\Pr(Z_i=1\mid x_i)$ | logistic gate with true intercept $-1$ and arm slope $2$ |
+| $G$ | marginal population over $(g,m_s)$, estimated without state labels |
+| $G_1,G_0$ | $G$ restricted and renormalised on $S_1$ and $S_0$ |
+
+The boundary at zero is fixed by the biological question. It is not tuned to
+maximise separation or significance.
+
+## Mechanistic trajectory: the prime-boost antibody ODE
+
+Between immunisations, the Andraud model satisfies
+
+\[
+\dot S=-m_sS,\qquad \dot A=W_l+S-m_AA,
+\]
+
+where $S$ is short-lived antibody production and $A$ is the measured antibody
+level. The solution is a sum of exponential components. The boost changes the
+short- and long-lived production fluxes; the long-lived asymptotes before and
+after boost are $C_1=W_l/m_A$ and
+$D_1=(W_l+\Delta W_l)/m_A$.
+
+`andraud_trajectory()` evaluates the closed-form trajectory using the more
+interpretable levels $A_0,C_1,C_2,D_1,D_2$ and the short-lived decay $m_s$.
+Here only $g$ and $m_s$ vary so that the Route II construction stays visible.
+
+## Simulate the known gate and kinetic truth
+
+```{r truth}
+set.seed(22)
+n <- 120
+arm <- rbinom(n, 1, 0.5)
+alpha_true <- -1
+beta_true <- 2
+pi_true <- plogis(alpha_true + beta_true * arm)
+z <- rbinom(n, 1, pi_true)
+
+c(true_probability_control = plogis(alpha_true),
+  true_probability_vaccine = plogis(alpha_true + beta_true),
+  realised_state1 = sum(z))
+```
+
+Create a fixed grid over durable gain and decay. Positive gains are drawn from
+the positive part of the grid and non-positive gains from its complement.
+Both states share the same decay grid.
+
+```{r candidates}
+G <- seq(-0.8, 0.8, by = 0.05)
+MS <- c(0.25, 0.5, 0.9, 1.5)
+candidates <- expand.grid(g = G, ms = MS)
+candidates$A0 <- 400
+candidates$C1 <- 900
+candidates$C2 <- 0.35 * candidates$C1
+candidates$D1 <- candidates$C1 * 10^candidates$g
+candidates$D2 <- 0.70 * candidates$D1
+
+w_positive_g <- dnorm(G, 0.35, 0.15) * (G > 0)
+w_nonpositive_g <- dnorm(G, -0.25, 0.18) * (G <= 0)
+w_positive_g <- w_positive_g / sum(w_positive_g)
+w_nonpositive_g <- w_nonpositive_g / sum(w_nonpositive_g)
+
+atom <- integer(n)
+for (i in seq_len(n)) {
+  gain_index <- sample(seq_along(G), 1,
+                       prob = if (z[i]) w_positive_g else w_nonpositive_g)
+  decay_index <- sample(seq_along(MS), 1)
+  atom[i] <- gain_index + (decay_index - 1L) * length(G)
+}
+```
+
+```{r simulate}
+times <- c(0, 1, 2.8, 3.7, 8.4, 14, 19.6)
+trajectory <- function(time, theta) {
+  andraud_trajectory(time, theta$A0, theta$C1, theta$C2,
+                     theta$D1, theta$D2, theta$ms)
+}
+
+obs <- do.call(rbind, lapply(seq_len(n), function(i) {
+  mu <- trajectory(times, candidates[atom[i], ])
+  data.frame(id = i, time = times,
+             value = 10^(log10(mu) + rnorm(length(times), 0, 0.12)))
+}))
+```
+
+```{r trajectory-plot, echo = FALSE, fig.alt="Twelve simulated prime-boost antibody trajectories split by whether their true durable gain is non-positive or positive."}
+plot_ids <- unlist(lapply(split(seq_len(n), z), head, 6))
+plot_obs <- subset(obs, id %in% plot_ids)
+plot_obs$state <- factor(z[plot_obs$id], levels = 0:1,
+                         labels = c("State 0: g <= 0", "State 1: g > 0"))
+
+ggplot(plot_obs, aes(time, value, group = id)) +
+  geom_line(alpha = 0.6) +
+  geom_point(size = 1.7) +
+  scale_y_log10() +
+  facet_wrap(~state) +
+  labs(x = "Time since prime (months)", y = "Antibody level (log scale)",
+       title = "Simulated prime-boost trajectories by the known durable state")
+```
+
+The true state is used only to evaluate recovery. The MBMM fitting code below
+does not receive `z`.
+
+## Score all candidates, then fit honest marginal banks
+
+```{r likelihood}
+LL <- trajectory_loglik(obs, candidates, trajectory, sigma = 0.12)
+loo <- bank_loo(LL, lambda = 1)
+dim(loo$weights)
+```
+
+`LL[i, j]` is the log likelihood of participant $i$ under kinetic atom $j$.
+`bank_loo()` refits the marginal weights 120 times: the weights in row $i$
+were estimated using every participant except $i$. This is essential because
+the same cohort supplies the marginal kinetic population and is then scored
+against it.
+
+Unlike Route I, the bank is not a state-1 bank. It estimates the combined
+population across both sides of the boundary.
+
+## Restrict the marginal population to the two states
+
+```{r restrict}
+state1_region <- candidates$g > 0
+
+score_region <- function(region) {
+  vapply(seq_len(n), function(i) {
+    restricted <- restrict_bank(loo$weights[i, ], region)$weights
+    class_loglik(LL[i, , drop = FALSE], restricted)[1]
+  }, numeric(1))
+}
+
+l1 <- score_region(state1_region)
+l0 <- score_region(!state1_region)
+mass1 <- rowSums(loo$weights[, state1_region, drop = FALSE])
+
+summary(mass1)
+```
+
+`restrict_bank()` first computes the fold-specific mass in a region and then
+renormalises the weights inside that region. Restriction divides by region
+mass, so near-zero mass would make a Route II result unstable. Here every fold
+keeps substantial mass on both sides.
+
+The following plot distinguishes three different objects: the population used
+to generate atoms, the finite realised sample of atoms, and the average
+leave-one-out estimate. They need not match point for point in a finite sample.
+
+```{r bank-comparison, echo = FALSE, fig.height = 9, fig.alt=c("Generating population weights over durable gain and decay.", "Finite realised atom frequencies over durable gain and decay.", "Average leave-one-out estimated weights over durable gain and decay.")}
+mean_pi <- mean(pi_true)
+true_gain_weight <- mean_pi * w_positive_g +
+  (1 - mean_pi) * w_nonpositive_g
+true_atom_weight <- rep(true_gain_weight / length(MS), times = length(MS))
+realised_atom_weight <- tabulate(atom, nbins = nrow(candidates)) / n
+estimated_atom_weight <- colMeans(loo$weights)
+
+p_truth <- plot_bank(candidates, true_atom_weight, "g", "ms") +
+  labs(title = "Generating population")
+p_realised <- plot_bank(candidates, realised_atom_weight, "g", "ms") +
+  labs(title = "Finite realised participants")
+p_estimated <- plot_bank(candidates, estimated_atom_weight, "g", "ms") +
+  labs(title = "Estimated marginal population")
+
+print(p_truth)
+print(p_realised)
+print(p_estimated)
+```
+
+## Fit and interpret the arm gate
+
+```{r gate}
+X <- cbind(intercept = 1, vaccine_arm = arm)
+fit <- fit_gate(l1, l0, X, firth = TRUE)
+oracle <- coef(glm(z ~ arm, family = binomial()))
+
+coefficient_check <- data.frame(
+  quantity = c("Generating truth", "Oracle using true state", "MBMM"),
+  intercept = c(alpha_true, oracle[1], fit$gamma[1]),
+  arm_slope = c(beta_true, oracle[2], fit$gamma[2])
+)
+coefficient_check
+```
+
+Firth penalisation is used because accurate state evidence can create near
+separation. The oracle again shows the finite-sample logistic result that
+would be obtained if the state were observed.
+
+```{r responsibility-plot, echo = FALSE, fig.alt="Posterior probabilities of positive durable gain grouped by the known simulated parameter region."}
+plot_responsibility(fit, z) +
+  labs(title = "Responsibility compared with the known parameter region")
+```
+
+```{r gate-plot, echo = FALSE, fig.alt="True and estimated probabilities of positive durable gain in the control and vaccine arms."}
+plot_gate(fit, arm, truth = z, true_probability = pi_true) +
+  scale_x_continuous(breaks = 0:1, labels = c("Control", "Vaccine")) +
+  labs(x = "Randomised arm", y = "Probability of positive durable gain",
+       title = "Estimated and generating gate probabilities")
+```
+
+## Did MBMM recover what it should?
+
+```{r recovery}
+estimated_probability <- tapply(fit$pi, arm, mean)
+true_probability <- c(control = plogis(alpha_true),
+                      vaccine = plogis(alpha_true + beta_true))
+
+recovery <- c(
+  true_arm_slope = beta_true,
+  oracle_arm_slope = unname(oracle[2]),
+  mbmm_arm_slope = unname(fit$gamma[2]),
+  state_AUC = auc(fit$w, z == 1),
+  uncertain_responsibilities = sum(fit$w > 0.1 & fit$w < 0.9),
+  minimum_state1_mass = min(mass1),
+  maximum_state1_mass = max(mass1)
+)
+round(recovery, 3)
+rbind(truth = true_probability, estimated = estimated_probability)
+```
+
+```{r permutation-test}
+test <- gate_test(l1, l0, X, firth = TRUE, B = 199, seed = 1)
+test
+```
+
+With `firth = TRUE`, the statistic is a difference in penalised objectives,
+not an ordinary likelihood-ratio statistic. The reported p-value comes from
+permuting the arm rows while keeping the trajectory-derived class likelihoods
+fixed.
+
+```{r executable-checks}
+stopifnot(
+  recovery["state_AUC"] > 0.9,
+  recovery["mbmm_arm_slope"] > 0,
+  abs(recovery["mbmm_arm_slope"] - recovery["oracle_arm_slope"]) < 0.75,
+  recovery["minimum_state1_mass"] > 0.1,
+  recovery["maximum_state1_mass"] < 0.9,
+  recovery["uncertain_responsibilities"] > 0,
+  test$p_value <= 0.05
+)
+```
+
+## What changed from Route I?
+
+Route I estimated a pure state-1 population from independent labelled donors
+and paired it with a separate background state. Route II instead estimated one
+marginal population from the analysis cohort, cross-fitted it, and restricted
+it to a prespecified region and its complement. The gate calculation is the
+same after the two class likelihoods have been formed.
+
+This controlled example checks that Route II recovers its known region and arm
+effect. A real analysis must additionally justify the biological boundary,
+identifiability of $g$, candidate coverage, the observation model,
+exchangeability across participants, and adequate region mass in every fold.
+Return to the [scientific and practical guide](mbmm.html), or compare the
+[Route I simulation](pipeline.html).

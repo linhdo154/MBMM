@@ -1,8 +1,8 @@
-/doc/
-/Meta/
-.RData
+.Rproj.user
 .Rhistory
-.Rproj.user/
+.RData
+.Ruserdata
+*.tar.gz
+*.Rcheck/
+docs/
 .DS_Store
-validation/
-docs

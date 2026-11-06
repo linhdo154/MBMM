@@ -1,0 +1,275 @@
+---
+title: "Route I: simulation with an independent reference bank"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Route I: simulation with an independent reference bank}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.5, fig.align = "center")
+```
+
+```{r setup}
+library(mbmm)
+library(ggplot2)
+theme_set(theme_minimal(base_size = 12))
+
+auc <- function(score, positive) {
+  r <- rank(score)
+  np <- sum(positive)
+  nn <- sum(!positive)
+  (sum(r[positive]) - np * (np + 1) / 2) / (np * nn)
+}
+```
+
+## What this vignette must establish
+
+**Scientific question:** does a baseline covariate change the probability of
+productive infection?
+
+**Why MBMM:** productive infection is latent. A participant can have a
+transient detectable measurement without the sustained viral trajectory that
+defines the biological state.
+
+**Route I:** an independent sample of known productively infected donors is
+available. Its trajectories define the state-1 kinetic population. The
+analysis participants never contribute to that bank.
+
+Because this is a simulation, we know the true state and the true gate
+coefficient. Success means that MBMM should:
+
+1. distinguish productive infection better than an "any detection" rule;
+2. recover the negative direction and approximate size of the gate effect;
+3. preserve uncertainty for ambiguous participants; and
+4. reject the no-covariate gate in a permutation test.
+
+The simulation is deliberately larger than a toy example. A small donor bank
+is not expected to reproduce a smooth generating population atom by atom;
+the scientific checks concern held-out state evidence and the gate effect.
+
+## The hierarchy in scientific language
+
+| MBMM object | Meaning in this simulation |
+|---|---|
+| $Y_i$ | repeated, possibly censored viral-load measurements |
+| $Z_i=1$ | productive infection |
+| $Z_i=0$ | no productive infection; some participants have transient detections |
+| $x_i$ | standardised baseline covariate |
+| $\Pr(Z_i=1\mid x_i)$ | logistic gate with true slope $-1.5$ |
+| $G_1$ | kinetic population estimated from independent state-1 donors |
+| $L_{i1}$ | analysis trajectory integrated over $G_1$ |
+| $L_{i0}$ | background likelihood near the assay floor |
+
+The covariate enters only the gate. It is not used to build the bank or to
+score trajectories.
+
+## Mechanistic trajectory: the eclipse-phase viral ODE
+
+The productive-infection candidates solve
+
+\[
+\begin{aligned}
+\dot T &= -\beta T V,\\
+\dot I_1 &= \beta T V-\kappa I_1,\\
+\dot I_2 &= \kappa I_1-\delta I_2,\\
+\dot V &= pI_2-cV.
+\end{aligned}
+\]
+
+$T$ is susceptible target cells, $I_1$ and $I_2$ are eclipse and productive
+infected cells, and $V$ is viral load. A candidate row supplies the kinetic
+parameters. `eclipse_trajectory()` solves this system; `eclipse_design()`
+constructs an identifiable candidate design.
+
+```{r simulate, eval = requireNamespace("deSolve", quietly = TRUE)}
+analysis <- simulate_mbmm(n = 160, beta_ab = -1.5, prevalence = 0.3,
+                          p_abortive = 0.4, n_pool = 120, seed = 7)
+
+reference <- simulate_mbmm(n = 360, beta_ab = 0, prevalence = 0.5,
+                           p_abortive = 0, n_pool = 120, seed = 17)
+reference_ids <- reference$truth$id[reference$truth$z == 1]
+reference_obs <- subset(reference$obs, id %in% reference_ids)
+
+c(analysis_participants = nrow(analysis$truth),
+  independent_state1_donors = length(reference_ids))
+```
+
+The reference simulation is generated independently, contains no abortive
+state-0 records, and is then restricted by the known simulated state. That
+restriction is what makes the donor bank *pure*. Independence alone would not
+be enough if the donor set were an unrestricted state mixture.
+
+```{r observed-trajectories, eval = requireNamespace("deSolve", quietly = TRUE), echo = FALSE, fig.alt="Twelve simulated viral-load trajectories split by true productive-infection state; sustained high curves occur primarily in state 1."}
+plot_ids <- unlist(lapply(split(analysis$truth$id, analysis$truth$z), head, 6))
+plot_obs <- subset(analysis$obs, id %in% plot_ids)
+plot_obs$plot_value <- ifelse(plot_obs$censored, plot_obs$lod,
+                              plot_obs$value)
+plot_obs$state <- factor(analysis$truth$z[match(plot_obs$id, analysis$truth$id)],
+                         levels = 0:1,
+                         labels = c("State 0: not productive",
+                                    "State 1: productive"))
+
+ggplot(plot_obs, aes(time, plot_value, group = id)) +
+  geom_line(alpha = 0.55) +
+  geom_point(aes(shape = censored), size = 1.7) +
+  scale_y_log10() +
+  facet_wrap(~state) +
+  scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 2),
+                     labels = c(`FALSE` = "Observed",
+                                `TRUE` = "Censored at assay limit")) +
+  labs(x = "Time", y = "Viral load (log scale)",
+       shape = "Censored",
+       title = "Longitudinal records carry more information than any detection",
+       caption = "Triangles are left-censored values displayed at their assay limit.")
+```
+
+For visualisation only, a censored value is drawn at its assay limit and marked
+with a triangle. The likelihood does **not** treat it as an observed value at
+that limit: `trajectory_loglik()` uses the appropriate left-tail probability.
+
+## Build the state-1 bank from independent donors
+
+First create candidates and reject any trajectory that becomes non-positive
+between visits. This is a mechanistic screen fixed without the analysis
+cohort.
+
+```{r candidates, eval = requireNamespace("deSolve", quietly = TRUE)}
+candidates <- eclipse_design(500, seed = 2)
+
+trajectory <- function(time, theta) {
+  eclipse_trajectory(time, theta$beta, theta$delta, theta$p, theta$V0,
+                     kappa = theta$kappa, c_clear = theta$c_clear,
+                     T0 = theta$T0)
+}
+
+positive <- screen_positive(candidates, trajectory,
+                            grid = seq(0, 22, by = 0.5))
+candidates <- positive$candidates
+c(rejected_nonpositive = positive$rejected,
+  retained_positive = nrow(candidates))
+```
+
+`trajectory_loglik()` evaluates every donor against every candidate under a
+log-scale Gaussian observation model with exact handling of left censoring.
+The generating residual scale is known here to be 0.5.
+
+```{r reference-likelihood, eval = requireNamespace("deSolve", quietly = TRUE)}
+LL_reference <- trajectory_loglik(reference_obs, candidates, trajectory,
+                                  sigma = 0.5)
+
+screen <- screen_candidates(LL_reference, nu = 80)
+bank_candidates <- candidates[screen$keep, , drop = FALSE]
+bank <- fit_bank(LL_reference[, screen$keep, drop = FALSE], lambda = 1)
+
+c(candidate_atoms = nrow(bank_candidates),
+  effective_atoms = 1 / sum(bank$weights^2))
+```
+
+The candidate support screen uses only independent donors, so it is also
+independent of every scored analysis participant. `fit_bank()` estimates how
+frequently those kinetic candidates occur in the donor population.
+
+## Form the two class likelihoods
+
+```{r class-likelihoods, eval = requireNamespace("deSolve", quietly = TRUE)}
+LL_analysis <- trajectory_loglik(analysis$obs, bank_candidates, trajectory,
+                                 sigma = 0.5)
+l1 <- class_loglik(LL_analysis, bank$weights)
+l0 <- background_loglik(analysis$obs, sigma = 0.5, floor = 0.5)
+```
+
+For state 1, `class_loglik()` integrates rather than selects across the bank.
+For state 0, `background_loglik()` represents repeated measurements near the
+assay floor. No infection-time lag is integrated here because
+`simulate_mbmm()` generated observations without a latent timing offset. A
+real analysis should integrate a lag only when that uncertainty belongs to
+its observation model.
+
+## Fit the covariate gate
+
+```{r gate, eval = requireNamespace("deSolve", quietly = TRUE)}
+X <- cbind(intercept = 1, baseline = analysis$truth$x)
+fit <- fit_gate(l1, l0, X)
+oracle <- coef(glm(z ~ x, data = analysis$truth, family = binomial()))
+
+coefficient_check <- data.frame(
+  quantity = c("Generating truth", "Oracle using true state", "MBMM"),
+  intercept = c(analysis$alpha, oracle[1], fit$gamma[1]),
+  baseline_slope = c(-1.5, oracle[2], fit$gamma[2])
+)
+coefficient_check
+```
+
+The oracle is the ordinary logistic fit that would be available if productive
+infection were observed without error. It separates finite-sample variation
+in the simulated states from error introduced by latent-state inference.
+
+```{r responsibility-plot, eval = requireNamespace("deSolve", quietly = TRUE), echo = FALSE, fig.alt="Posterior productive-infection probabilities grouped by known simulated state, with intermediate values showing uncertainty."}
+plot_responsibility(fit, analysis$truth$z) +
+  labs(title = "Posterior responsibility compared with the known state",
+       subtitle = "Intermediate values retain genuine classification uncertainty")
+```
+
+```{r gate-plot, eval = requireNamespace("deSolve", quietly = TRUE), echo = FALSE, fig.alt="Estimated and true productive-infection probabilities decrease with the baseline covariate along similar curves."}
+plot_gate(fit, analysis$truth$x, truth = analysis$truth$z,
+          true_probability = plogis(analysis$alpha -
+                                    1.5 * analysis$truth$x)) +
+  labs(x = "Baseline covariate", y = "Probability of productive infection",
+       title = "The inferred gate follows the generating gate")
+```
+
+## Did MBMM recover what it should?
+
+```{r recovery, eval = requireNamespace("deSolve", quietly = TRUE)}
+detected <- tapply(!analysis$obs$censored, analysis$obs$id, any)
+
+recovery <- c(
+  true_slope = -1.5,
+  oracle_slope = unname(oracle[2]),
+  mbmm_slope = unname(fit$gamma[2]),
+  mbmm_state_AUC = auc(fit$w, analysis$truth$z == 1),
+  detection_rule_AUC = auc(as.numeric(detected), analysis$truth$z == 1),
+  uncertain_responsibilities = sum(fit$w > 0.1 & fit$w < 0.9)
+)
+round(recovery, 3)
+```
+
+```{r detection-table, eval = requireNamespace("deSolve", quietly = TRUE)}
+table(any_detection = detected, true_productive_state = analysis$truth$z)
+```
+
+```{r permutation-test, eval = requireNamespace("deSolve", quietly = TRUE)}
+test <- gate_test(l1, l0, X, B = 199, seed = 1)
+test
+```
+
+These executable checks prevent the vignette from quietly presenting a failed
+simulation as success.
+
+```{r executable-checks, eval = requireNamespace("deSolve", quietly = TRUE)}
+stopifnot(
+  recovery["mbmm_state_AUC"] > 0.85,
+  recovery["mbmm_state_AUC"] > recovery["detection_rule_AUC"],
+  recovery["mbmm_slope"] < 0,
+  abs(recovery["mbmm_slope"] - recovery["oracle_slope"]) < 1,
+  recovery["uncertain_responsibilities"] > 0,
+  test$p_value <= 0.05
+)
+```
+
+## What this example establishes—and what it does not
+
+In this controlled setting, an independent, pure state-1 donor bank produces
+useful held-out state evidence, outperforms thresholded detection, and recovers
+the gate effect. It checks the package's Route I computation against known
+truth.
+
+For a real study, the user must still justify donor-state purity,
+transportability of within-state kinetics, candidate coverage, the observation
+model, and the complete independence of bank construction. Return to the
+[scientific and practical guide](mbmm.html), or continue to the
+[Route II simulation](sdy2354.html) to see how the construction changes when
+no labelled reference population exists.
