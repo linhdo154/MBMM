@@ -1,0 +1,56 @@
+# Background (class-0) log-likelihood at a fraction of the assay limit
+
+The absence of the modelled process is not itself a mechanistic
+trajectory. In the viral application, class 0 is specified rather than
+estimated: measurements are taken to fluctuate about a floor set by the
+assay, by default half the limit of detection.
+
+## Usage
+
+``` r
+background_loglik(obs, sigma, floor = 0.5)
+```
+
+## Arguments
+
+- obs:
+
+  As in
+  [`trajectory_loglik()`](https://linhdo154.github.io/MBMM/reference/trajectory_loglik.md);
+  needs `lod` for censored rows.
+
+- sigma:
+
+  Residual standard deviation on the \\\log\_{10}\\ scale. Use the same
+  value as the class-1 likelihood: the two classes share one scale, so
+  sensitivity to it acts on both.
+
+- floor:
+
+  Fraction of the limit of detection taken as the background level.
+  `0.5` reproduces the analysis in the accompanying manuscript.
+
+## Value
+
+A named numeric vector of log class-0 likelihoods.
+
+## Details
+
+Because the floor is a fixed fraction of the limit, every censored
+measurement contributes the same constant \\\log
+\Phi(-\log\_{10}(\mathrm{floor})/\sigma)\\ whatever limit was in force.
+A record consisting only of censored measurements therefore has a
+class-0 likelihood that depends on how many visits there were and not on
+which visits they were, so its Bayes factor is driven entirely by the
+class-1 term.
+
+## Examples
+
+``` r
+obs <- data.frame(id = c(1, 1, 2, 2), time = c(1, 3, 1, 3),
+                  value = c(NA, 500, NA, NA), lod = 100,
+                  censored = c(TRUE, FALSE, TRUE, TRUE))
+background_loglik(obs, sigma = 1.19)
+#>         1         2 
+#> -1.957045 -1.022142 
+```

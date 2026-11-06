@@ -1,37 +1,46 @@
 # mbmm
 
-`mbmm` implements the **Mechanistic Bayesian Mixture Model (MBMM)**
-framework of Do, McCarthy, and Rogers (2026), *A Mechanistic Bayesian
-Framework for Latent-State Inference in Vaccine and Infection
-Immunology*.
+**mbmm** implements the **Mechanistic Bayes Mixture Model (MBMM)**
+framework described by Do, McCarthy, and Rogers (2026) in *Mechanistic
+Bayes Mixture Models*.
 
-MBMM infers posterior probabilities of latent immunological states, such
-as productive infection versus non-establishment or transient/abortive
-detection, or a boost-responsive versus weak/stable antibody phenotype,
-from sparse longitudinal biomarker trajectories.
+MBMM estimates how a covariate changes the probability of a latent
+biological state expressed through a longitudinal mechanistic
+trajectory. Examples include productive infection versus
+non-establishment, or a positive durable antibody gain versus no durable
+gain.
 
-The framework embeds an application-specific ordinary differential
-equation trajectory model inside a Bayesian mixture likelihood evaluated
-against Approximate Bayesian Computation (ABC) reference banks.
-Covariates are linked to latent-state probabilities through a logistic
-gate for two classes or a multinomial gate for more than two classes.
+Rather than reducing a trajectory to a thresholded label, MBMM evaluates
+each participant against populations of mechanistic trajectories. A
+covariate-dependent logistic gate supplies the prior state probability,
+and the trajectory evidence and gate combine into a posterior
+responsibility. Participants whose trajectories do not settle the state
+contribute according to that uncertainty instead of being forced into a
+class.
 
-The package is deliberately domain-agnostic. Users supply the
-mechanistic trajectory model, ABC prior, observation model, and
-covariate data. `mbmm` supplies the shared inferential engine,
-including:
+The package is model-agnostic. Users may supply any positive trajectory
+function with arguments **time** and **theta**, including a custom ODE
+solved with **deSolve**. Built-in eclipse-phase viral and prime-boost
+antibody models are included for the manuscript examples.
 
-- ABC reference-bank construction;
-- marginal reference-bank likelihoods;
-- leave-one-donor-out scoring;
-- logistic and multinomial gate fitting;
-- likelihood-ratio and permutation tests;
-- fitted-threshold estimation and uncertainty summaries;
-- reduced manuscript-style simulation tools.
+The current package provides:
+
+- censoring-aware participant-by-trajectory likelihoods;
+- integration over latent timing offsets and other nuisance coordinates;
+- entropy-penalised kinetic-population estimation;
+- independent-donor and exact leave-one-out bank construction;
+- Route I state-specific reference banks;
+- Route II restriction to a prespecified parameter-space region;
+- logistic gate fitting, including optional Firth penalisation;
+- likelihood-ratio or penalised-objective statistics with permutation
+  tests;
+- diagnostic plots for banks, responsibilities, and fitted gates; and
+- fully synthetic examples with known truth and executable recovery
+  checks.
 
 ## Installation
 
-You can install the development version of `mbmm` from GitHub with:
+Install the development version from GitHub:
 
 ``` r
 
@@ -39,31 +48,75 @@ You can install the development version of `mbmm` from GitHub with:
 remotes::install_github("linhdo154/MBMM")
 ```
 
-## Getting started
-
-The [Introduction to
-mbmm](https://linhdo154.github.io/MBMM/articles/mbmm-intro.html)
-vignette walks through the main stages of an MBMM analysis: constructing
-reference banks, scoring subjects, and fitting the covariate-linked gate
-model using simulated correlate-of-protection data.
-
-The [reduced manuscript-style
-simulation](https://linhdo154.github.io/MBMM/articles/mbmm-simulation-demo.html)
-vignette demonstrates how to generate synthetic cohorts and run the
-pipeline end to end.
-
-The complete package website is available at:
-
-<https://linhdo154.github.io/MBMM/>
+Then load the package:
 
 ``` r
 
 library(mbmm)
 ```
 
+## Getting started
+
+The package has four linked vignettes:
+
+- [Should I use
+  MBMM?](https://linhdo154.github.io/MBMM/articles/mbmm.html) explains
+  suitable scientific questions, required assumptions, core functions,
+  diagnostics, and reporting conditions.
+- [Bring your own
+  ODE](https://linhdo154.github.io/MBMM/articles/custom-ode.html)
+  reconstructs the built-in models from scratch, shows both familiar
+  parameter boxes and identifiable bank designs, and fits a custom
+  constant-beta HIV model.
+- [Route I](https://linhdo154.github.io/MBMM/articles/pipeline.html)
+  uses an independent pure reference bank in a productive-infection
+  simulation and checks recovery against known truth.
+- [Route II](https://linhdo154.github.io/MBMM/articles/sdy2354.html)
+  defines a durable-gain state as a prespecified parameter region, uses
+  exact leave-one-out banks, and checks recovery against known truth.
+
+The complete package website is available at:
+
+<https://linhdo154.github.io/MBMM/>
+
+## Minimal workflow
+
+``` r
+
+# Score each participant against each candidate trajectory
+LL <- trajectory_loglik(
+  obs, candidates, trajectory = my_model, sigma = 0.3
+)
+
+# Estimate a kinetic population from an appropriate donor likelihood matrix
+bank <- fit_bank(LL_donors, lambda = 1)
+
+# Form the two class likelihoods
+l1 <- class_loglik(LL, bank$weights)
+l0 <- background_loglik(obs, sigma = 0.3)
+
+# Fit and test the covariate gate
+fit <- fit_gate(l1, l0, X)
+test <- gate_test(l1, l0, X, B = 999)
+```
+
+The bank used to score a participant must not have been fitted or
+screened using that participant’s measurements. Use a separate donor
+sample or exact cross-fitting with **bank_loo()**.
+
+## Data and reproduction
+
+No participant-level or packaged SDY2354 dataset is distributed with
+mbmm. To reproduce the manuscript’s SDY2354 analysis, obtain SDY2354
+directly from ImmPort under its user agreement and provide the prepared
+table to **inst/reproduce/sdy2354_table3.R**.
+
+**simulate_mbmm()** supplies a fully synthetic Route I cohort with known
+latent states.
+
 ## Citation
 
-To obtain the recommended package citation in R, run:
+To obtain the recommended package citation in R:
 
 ``` r
 
@@ -73,8 +126,7 @@ citation("mbmm")
 The methodological framework is described in:
 
 > Do, L., McCarthy, J., and Rogers, B. (2026).  
-> *A Mechanistic Bayesian Framework for Latent-State Inference in
-> Vaccine and Infection Immunology.*
+> *Mechanistic Bayes Mixture Models.*
 
 ## License
 
@@ -82,98 +134,93 @@ MIT © Linh Do
 
 # Package index
 
-## All functions
+## Likelihood
 
-- [`mbmm()`](https://linhdo154.github.io/MBMM/reference/mbmm.md) : Fit a
-  bank-based MBMM analysis
-- [`mbmm_abc_bank()`](https://linhdo154.github.io/MBMM/reference/mbmm_abc_bank.md)
-  : Fit ABC posteriors for multiple subjects or donors
-- [`mbmm_abc_fit()`](https://linhdo154.github.io/MBMM/reference/mbmm_abc_fit.md)
-  : Fit an ABC rejection-sampling posterior for one subject
-- [`mbmm_backtransform_threshold()`](https://linhdo154.github.io/MBMM/reference/mbmm_backtransform_threshold.md)
-  : Back-transform an MBMM gate threshold
-- [`mbmm_bootstrap_gate_threshold()`](https://linhdo154.github.io/MBMM/reference/mbmm_bootstrap_gate_threshold.md)
-  : Bootstrap an MBMM gate threshold
-- [`mbmm_class_loglik()`](https://linhdo154.github.io/MBMM/reference/mbmm_class_loglik.md)
-  : Reference-bank class-conditional log-likelihood for one subject
-- [`mbmm_default_distance()`](https://linhdo154.github.io/MBMM/reference/mbmm_default_distance.md)
-  : Default ABC discrepancy: censoring-aware weighted RMSE on the log10
-  scale
-- [`mbmm_demo_scenario_grid()`](https://linhdo154.github.io/MBMM/reference/mbmm_demo_scenario_grid.md)
-  : Create the default reduced manuscript-style scenario grid
-- [`mbmm_demo_visit_schedules()`](https://linhdo154.github.io/MBMM/reference/mbmm_demo_visit_schedules.md)
-  : Public visit schedules for the reduced MBMM simulation
-- [`mbmm_dnorm_censored()`](https://linhdo154.github.io/MBMM/reference/mbmm_dnorm_censored.md)
-  : Gaussian log-density with optional left censoring at an LOD
-- [`mbmm_example_eclipse_prior()`](https://linhdo154.github.io/MBMM/reference/mbmm_example_eclipse_prior.md)
-  : Example ABC prior sampler for the eclipse-phase model
-- [`mbmm_example_eclipse_simulate()`](https://linhdo154.github.io/MBMM/reference/mbmm_example_eclipse_simulate.md)
-  : Example mechanistic trajectory model: eclipse-phase viral kinetics
-- [`mbmm_fit_gate()`](https://linhdo154.github.io/MBMM/reference/mbmm_fit_gate.md)
-  : Fit the MBMM gate model
-- [`mbmm_gate_threshold()`](https://linhdo154.github.io/MBMM/reference/mbmm_gate_threshold.md)
-  : Fitted MBMM gate threshold for a continuous covariate
-- [`mbmm_inv_logit()`](https://linhdo154.github.io/MBMM/reference/mbmm_inv_logit.md)
-  : Inverse logit
-- [`mbmm_join_targets()`](https://linhdo154.github.io/MBMM/reference/mbmm_join_targets.md)
-  : Join target-specific particle banks into complete multitarget
-  bundles
-- [`mbmm_logit()`](https://linhdo154.github.io/MBMM/reference/mbmm_logit.md)
-  : Logit
-- [`mbmm_logmeanexp()`](https://linhdo154.github.io/MBMM/reference/mbmm_logmeanexp.md)
-  : Numerically stable log-mean-exp
-- [`mbmm_logsumexp()`](https://linhdo154.github.io/MBMM/reference/mbmm_logsumexp.md)
-  : Numerically stable log-sum-exp
-- [`mbmm_noise_floor_loglik()`](https://linhdo154.github.io/MBMM/reference/mbmm_noise_floor_loglik.md)
-  : Analytic non-establishment class likelihood for COVID5001-style
-  analyses
-- [`mbmm_pool_bank()`](https://linhdo154.github.io/MBMM/reference/mbmm_pool_bank.md)
-  : Pool per-donor ABC particles into a mechanistic reference bank
-- [`mbmm_predict_bank()`](https://linhdo154.github.io/MBMM/reference/mbmm_predict_bank.md)
-  : Predict mechanistic bank trajectories at required observation times
-- [`mbmm_predict_gate()`](https://linhdo154.github.io/MBMM/reference/mbmm_predict_gate.md)
-  : Predict fitted MBMM gate probabilities
-- [`mbmm_productive_infection()`](https://linhdo154.github.io/MBMM/reference/mbmm_productive_infection.md)
-  : Fit a productive-infection MBMM analysis
-- [`mbmm_rk4_solve()`](https://linhdo154.github.io/MBMM/reference/mbmm_rk4_solve.md)
-  : Fixed-step 4th-order Runge-Kutta ODE integrator (base R, no
-  dependencies)
-- [`mbmm_run_simulation_grid()`](https://linhdo154.github.io/MBMM/reference/mbmm_run_simulation_grid.md)
-  : Run a manuscript-style simulation grid
-- [`mbmm_safe_log10()`](https://linhdo154.github.io/MBMM/reference/mbmm_safe_log10.md)
-  : Safe log10 with a positive floor
-- [`mbmm_score_subjects()`](https://linhdo154.github.io/MBMM/reference/mbmm_score_subjects.md)
-  : Score every subject against class-specific reference banks
-- [`mbmm_simulate_abortive_pattern()`](https://linhdo154.github.io/MBMM/reference/mbmm_simulate_abortive_pattern.md)
-  : Simulate one transient or abortive detection pattern
-- [`mbmm_simulate_cop_demo()`](https://linhdo154.github.io/MBMM/reference/mbmm_simulate_cop_demo.md)
-  : Simulate a synthetic correlate-of-protection cohort
-- [`mbmm_simulate_demo_antibody()`](https://linhdo154.github.io/MBMM/reference/mbmm_simulate_demo_antibody.md)
-  : Simulate a fully synthetic baseline antibody measurement
-- [`mbmm_simulate_manuscript_demo()`](https://linhdo154.github.io/MBMM/reference/mbmm_simulate_manuscript_demo.md)
-  : Simulate a reduced manuscript-style MBMM dataset
-- [`plot(`*`<mbmm_fit>`*`)`](https://linhdo154.github.io/MBMM/reference/plot.mbmm_fit.md)
-  : Plot the bank log-likelihood-ratio diagnostic for an MBMM fit
-- [`plot(`*`<mbmm_gate>`*`)`](https://linhdo154.github.io/MBMM/reference/plot.mbmm_gate.md)
-  : Plot a fitted MBMM gate curve against one continuous covariate
-- [`print(`*`<mbmm_fit>`*`)`](https://linhdo154.github.io/MBMM/reference/print.mbmm_fit.md)
-  : Print an mbmm_fit object
-- [`print(`*`<mbmm_gate>`*`)`](https://linhdo154.github.io/MBMM/reference/print.mbmm_gate.md)
-  : Print an mbmm_gate object
-- [`print(`*`<mbmm_threshold_summary>`*`)`](https://linhdo154.github.io/MBMM/reference/print.mbmm_threshold_summary.md)
-  : Print an MBMM threshold summary
-- [`summary(`*`<mbmm_fit>`*`)`](https://linhdo154.github.io/MBMM/reference/summary.mbmm_fit.md)
-  : Summarize an mbmm_fit object
-- [`summary(`*`<mbmm_gate>`*`)`](https://linhdo154.github.io/MBMM/reference/summary.mbmm_gate.md)
-  : Summarize an mbmm_gate object
-- [`summary(`*`<mbmm_threshold_summary>`*`)`](https://linhdo154.github.io/MBMM/reference/summary.mbmm_threshold_summary.md)
-  : Summarize an MBMM threshold summary
+Turning measurements into evidence for a state
+
+- [`obs_loglik()`](https://linhdo154.github.io/MBMM/reference/obs_loglik.md)
+  : Log-likelihood of one measurement under a trajectory
+- [`trajectory_loglik()`](https://linhdo154.github.io/MBMM/reference/trajectory_loglik.md)
+  : Participant-by-candidate log-likelihood matrix
+- [`background_loglik()`](https://linhdo154.github.io/MBMM/reference/background_loglik.md)
+  : Background (class-0) log-likelihood at a fraction of the assay limit
+- [`class_loglik()`](https://linhdo154.github.io/MBMM/reference/class_loglik.md)
+  : Class likelihood from a bank
+
+## Building the likelihood over shared points
+
+Integrating out what the question is not about
+
+- [`pool_marginal()`](https://linhdo154.github.io/MBMM/reference/pool_marginal.md)
+  : Integrate a nuisance pool out of a candidate likelihood
+- [`jitter_marginal()`](https://linhdo154.github.io/MBMM/reference/jitter_marginal.md)
+  : Integrate a calibration offset along a grid coordinate
+
+## The kinetic population
+
+Estimating the bank, and keeping it honest
+
+- [`fit_bank()`](https://linhdo154.github.io/MBMM/reference/fit_bank.md)
+  : Estimate bank weights by entropy-penalised maximum likelihood
+- [`bank_loo()`](https://linhdo154.github.io/MBMM/reference/bank_loo.md)
+  : Leave-one-out banks
+- [`screen_candidates()`](https://linhdo154.github.io/MBMM/reference/screen_candidates.md)
+  : Screen candidates to the ones participants actually support
+- [`screen_positive()`](https://linhdo154.github.io/MBMM/reference/screen_positive.md)
+  : Reject candidates whose trajectory is not positive
+- [`profile_sigma()`](https://linhdo154.github.io/MBMM/reference/profile_sigma.md)
+  : Profile the residual scale
+- [`restrict_bank()`](https://linhdo154.github.io/MBMM/reference/restrict_bank.md)
+  : Restrict a bank to a region of parameter space (Route II)
+
+## The gate
+
+Covariate association with the latent state
+
+- [`fit_gate()`](https://linhdo154.github.io/MBMM/reference/fit_gate.md)
+  : Fit the covariate gate by EM
+- [`gate_test()`](https://linhdo154.github.io/MBMM/reference/gate_test.md)
+  : Test a covariate effect in the gate
+
+## Mechanistic models
+
+- [`eclipse_trajectory()`](https://linhdo154.github.io/MBMM/reference/eclipse_trajectory.md)
+  : Eclipse-phase target-cell-limited viral kinetics
+- [`eclipse_design()`](https://linhdo154.github.io/MBMM/reference/eclipse_design.md)
+  : Candidate design on identifiable viral coordinates
+- [`andraud_trajectory()`](https://linhdo154.github.io/MBMM/reference/andraud_trajectory.md)
+  : Reduced prime-boost antibody kinetics
+- [`andraud_levels()`](https://linhdo154.github.io/MBMM/reference/andraud_levels.md)
+  : Class coordinate for a prime-boost question
+- [`amp_to_flux()`](https://linhdo154.github.io/MBMM/reference/amp_to_flux.md)
+  [`flux_to_amp()`](https://linhdo154.github.io/MBMM/reference/amp_to_flux.md)
+  : Convert between amplitudes and production fluxes
+
+## Simulation
+
+- [`simulate_mbmm()`](https://linhdo154.github.io/MBMM/reference/simulate_mbmm.md)
+  : Simulate a cohort with a latent kinetic state
+
+## Visualisation
+
+Seeing the kinetic population and checking simulation recovery
+
+- [`plot_bank()`](https://linhdo154.github.io/MBMM/reference/plot_bank.md)
+  : Plot a weighted mechanistic trajectory bank
+- [`plot_responsibility()`](https://linhdo154.github.io/MBMM/reference/plot_responsibility.md)
+  : Plot posterior responsibilities against simulated truth
+- [`plot_gate()`](https://linhdo154.github.io/MBMM/reference/plot_gate.md)
+  : Plot a fitted covariate gate
 
 # Articles
 
-### All vignettes
+### Articles
 
-- [Introduction to MBMM: fitting a Mechanistic Bayesian Mixture
-  Model](https://linhdo154.github.io/MBMM/articles/mbmm-intro.md):
-- [A reduced manuscript-style MBMM
-  simulation](https://linhdo154.github.io/MBMM/articles/mbmm-simulation-demo.md):
+- [Should I use MBMM? A scientific and practical
+  guide](https://linhdo154.github.io/MBMM/articles/mbmm.md):
+- [Bring your own ODE to
+  MBMM](https://linhdo154.github.io/MBMM/articles/custom-ode.md):
+- [Route I: simulation with an independent reference
+  bank](https://linhdo154.github.io/MBMM/articles/pipeline.md):
+- [Route II: simulation with a prespecified parameter
+  region](https://linhdo154.github.io/MBMM/articles/sdy2354.md):
